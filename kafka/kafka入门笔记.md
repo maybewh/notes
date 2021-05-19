@@ -483,3 +483,27 @@ public class SimpleExample {
 }
 ```
 
+#### 2.5 Kafka原理
+
+##### 2.5.1 Leader和Follower
+
+​		在Kafka中，每个topic的分区可以拥有若干副本。Kafka会自动在每个副本上备份数据，当一个节点down掉时，数据依旧是可用的。在创建topic的时候，Kafka会将每个分区的Leader均匀地分配在每个broker上。所有的读写操作都是由Leader来完成，而所有的follower都复制leader的日志数据文件。当leader出现故障时，follower会被选举为leader。
+
+​		Kafka判断节点是否存活：
+
+​		1）节点必须可以维护和Zookeeper的连接，Zookeeper通过心跳机制检查每个节点的连接；
+
+​		2） 如果节点是follower，它必须能及时同步leader的写操作，延时不能太久。
+
+#####	2.5.2 AR、ISR、OSR
+
+> ​		每个分区会有多个副本，副本又分为Leader副本和Follower副本，Leader副本负责读写，Follower副本只负责同步，即只负责备份。当Leader副本down掉后，会从其他Follower副本中选举一个作为Leader副本。具体可参考：https://www.cnblogs.com/aspirant/p/9179045.html
+
+​		在实际环境中，leader有可能会出现故障，所以Kafka会选举出一个新的leader。接下来说明涉及到的几个概念。Kafka中，可以把follower按照不同状态分为三类---AR、ISR、OSR。
+
+* 分区所有副本称为[AR] （Assigned Replicas----已分配的副本）
+* 所有与leader副本保持一定程度同步的副本（包括leader副本在内）组成[ISR] (In-Sync Replicas---在同步中的副本)
+* 由于follower副本同步滞后过多的副本（不包括leader副本）组成[OSR] (Out-of-Sync Replias)
+* AR = ISR + OSR
+* 正常情况下，所有的follower副本都应该与leader副本保持同步，即AR = ISR, OSR集合为空
+
