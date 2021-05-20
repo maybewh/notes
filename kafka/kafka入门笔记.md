@@ -594,10 +594,22 @@ auto.leader.rebalance.enable true
 
 * Broker
 
-  ​	Broker丢失消息的原因：Kafka将数据异步批量存储到磁盘中，即按照一定的消息量和时间间隔进行刷盘。
+  ​		Broker丢失消息的原因：**Kafka将数据异步批量存储到磁盘中，即按照一定的消息量和时间间隔进行刷盘。**
 
-  这是由Liunx操作系统决定的。当将数据存储到Liunx操作系统种，会先存储
+  > ​		这是由Liunx操作系统决定的。当将数据存储到Liunx操作系统中，会先存储到页缓存(Page cache)中，按照时间或者其他条件进行刷盘（从page cache到file)，或者通过fsync命令强制刷盘。数据在page cache中时，如果系统挂掉，数据会丢失。
+  >
+  > ​		刷盘触发条件有三：
+  >
+  > * 主动调用sync或fsync函数
+  > * 可用内存低于阈值
+  > * dirty data时间达到阈值。dirty是pagecache的一个标识位，当有数据写入到pageCache时，pagecache被标注为dirty，数据刷盘后，dirty标志清除。
+
+  **kafka解决办法 ：通过producer与broker协同处理，也就是ack机制。**
+
+  ​		具体如下：当ack为-1时，当所有的follower从leader中复制数据后，才会返回ack。此时数据已经写入磁盘，所以机器停电后，数据也不会丢失。
 
 * Producer
+
+  ​	Producer丢失数据，发生在生产者的客户端。为了提升效率，减少I/O，producer在发送数据时，可以将多个请求进行合并后发送。
 
 * Consumer
