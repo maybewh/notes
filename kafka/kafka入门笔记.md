@@ -2,7 +2,7 @@
 
 ## 黑马第一阶段
 
-
+> 整体参考：https://www.pianshen.com/article/2642435158/
 
 ## 黑马第二阶段
 
@@ -507,3 +507,97 @@ public class SimpleExample {
 * AR = ISR + OSR
 * 正常情况下，所有的follower副本都应该与leader副本保持同步，即AR = ISR, OSR集合为空
 
+##### 2.5.3 Leader选举，Controller介绍
+
+> ​		Kafka控制器管理着整个集群中分区以及副本的状态，控制器的选举需要依赖于Zookeeper，在Kafka集群启动的时候，都会先去访问ZK中的这个节点，如果不存在Broker就会创建这个节点，先到先得称为Controller，其他Broker当访问这个节点时，如果读取到的brokerid不等于-1，那么说明已经被选举出来了。那么获取的controller会如下：
+
+```sh
+[zk: localhost:2181(CONNECTED) 3] get /controller 
+{"version":1,"brokerid":0,"timestamp":"1608173427409"}
+
+#其中version为固定的版本号1
+#brokerid为控制器的broker节点id
+#timestamp为改节点被选举成Controller的时间
+```
+
+​		在任何时候，集群中都只会存在一个Controller，ZK中还维护着一个永久节点 --controller_epoch，该节点记录着控制器的变更次数，这个节点初始值为1，每选举一次Controller，那么该值+1。
+
+​		Controller的职责：
+
+* 监听分区的变化
+* 监听主题相关的变化
+* 监听Broker的变化
+* 从ZK中获取Broker、Topic、Partition相关的元数据
+* 启动并管理分区状态和副本状态
+* 更新集群的元数据信息，并同步给其他的Broker
+* 如果开启了自动优先副本选举，那么会后台启动一个任务用来自动维护优先副本的均衡
+
+> 可参考：https://blog.csdn.net/shufangreal/article/details/111375955
+
+##### 2.5.4 Kafka-Leader负载均衡
+
+> ​		当一个broker停止或者crashes时，所有本来将它作为leader的分区将会把leader转移到其他broker上去，极端情况下，会导致同一个leader管理多个分区，导致负载不均衡，同时当这个broker重启时，如果这个broker不再是任何分区的leader,kafka的client也不会从这个broker来读取消息，从而导致资源的浪费。
+>
+> ​		kafka中有一个被称为优先副本（preferred replicas）的概念。如果一个分区有3个副本，且这3个副本的优先级别分别为0,1,2，根据优先副本的概念，0会作为leader 。当0节点的broker挂掉时，会启动1这个节点broker当做leader。当0节点的broker再次启动后，会自动恢复为此partition的leader。不会导致负载不均衡和资源浪费，这就是leader的均衡机制。
+
+在配置文件conf/ server.properties中配置开启（默认就是开启）
+
+```java
+auto.leader.rebalance.enable true
+```
+
+
+
+##### 2.5.5 Kafka生产、消费数据流程
+
+###### 2.5.5.1 Kafka生产数据流程
+
+* broker进程上的leader将消息写入到本地log中
+* follower从leader上拉取消息，写入到本地log，并向leader发送ACK
+* leader接收到所有的ISR中的Replica的ACK后，并向生产者返回ACK
+
+###### 2.5.5.2 Kafka数据消费流程
+
+![image-20210520110517972](D:\文档\笔记\kafka\kafka入门笔记.assets\image-20210520110517972.png)
+
+##### 2.5.6 Kafka数据存储形式（物理存储）
+
+> 可参考： https://www.cnblogs.com/zhengzhaoxiang/p/13977382.html
+>
+> 问题：普通消息和包装消息
+
+* 一个Topic由多个分区组成
+* 一个分区(partition)由多个segment组成
+* 一个segment（段）由多个文件组成（log、index、timeindex）
+
+
+
++ 文件管理：
+
+​		保留数据时Kafka的一个基本特性，Kafka不会一直保留数据，也不会等所有消费者读取了消息才删除消息（消息消费情况是由消费者记录）。默认情况下，以segment为单位进行管理，默认大小为10M，每个片段(log)包含1GB或一周数据，以较小的为准。当前正在写入数据的片段叫做活跃片段，活跃片段不会被删除。
+
++ 文件格式：
+
+  ​		Kafka的消息和偏移量保存在文件里。保存在磁盘上的数据格式与从生产者发送过来的或发送给消费者的消息格式是一样的。这样方便进行磁盘存储和网络传输，也方便Kafka使用零拷贝技术给消费者发送消息。问题：普通消息和包装消息？
+
+![tmp](D:\文档\笔记\kafka\kafka入门笔记.assets\tmp.png)
+
+>
+>
+>
+
+##### 2.5.7 Kafka消息不丢失机制
+
+> https://zhuanlan.zhihu.com/p/354772550
+
+![tmp](D:\文档\笔记\kafka\kafka入门笔记.assets\tmp.jpg)
+
+* Broker
+
+  ​	Broker丢失消息的原因：Kafka将数据异步批量存储到磁盘中，即按照一定的消息量和时间间隔进行刷盘。
+
+  这是由Liunx操作系统决定的。当将数据存储到Liunx操作系统种，会先存储
+
+* Producer
+
+* Consumer
