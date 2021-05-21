@@ -610,6 +610,103 @@ auto.leader.rebalance.enable true
 
 * Producer
 
-  ​	Producer丢失数据，发生在生产者的客户端。为了提升效率，减少I/O，producer在发送数据时，可以将多个请求进行合并后发送。
+  ​		Producer丢失数据，发生在生产者的客户端。为了提升效率，减少I/O，producer在发送数据时，可以将多个请求进行合并后发送。同时，我们还会将生产者改造为异步方式，客户端通过callback来处理消息发送失败或者超时情况。那么则会产生以下两种异常情况。
+
+  + 那么数据在缓存在内存的时候，就可能会丢失，如下图所示。
+
+  ![生产者数据丢失](D:\文档\笔记\kafka\kafka入门笔记.assets\生产者数据丢失.jpg)
+
+  + 客户端发送完消息后，通过调用如果消息是多线程异步产生的，则线程会被挂起等待，占用内存，造成程序奔溃，消息丢失。
+
+    ![生产者异步发送消息导致数据丢失](D:\文档\笔记\kafka\kafka入门笔记.assets\生产者异步发送消息导致数据丢失.jpg)
+
+  + 解决思路：
+
+    > - 同步：发送一批数据给Kafka后，等待Kafka返回结果
+    > - 异步：发送一批数据给Kafka后，只是提供一个回调函数
 
 * Consumer
+
+  Consumer消费消息的步骤：接收消息、处理消息、反馈“处理完毕”(commited)
+
+  Consumer消费方式主要分为两种：自动提交offset，手动提交offset
+
+  + 自动提交offset：根据一定的时间间隔，将接收到的消息进行commit。commit过程和消费消息的过程是异步的。也就是说，可能存在消费过程未成功（比如抛出异常），commit消息已经提交了。此时消息就丢失了。示例代码如下，当insertIntoDB(record)失败后，消息将会出现丢失。
+
+    ```java
+    roperties props = new Properties();  
+    props.put("bootstrap.servers", "localhost:9092");  
+    props.put("group.id", "test");  
+    // 自动提交开关
+    props.put("enable.auto.commit", "true");
+    // 自动提交时间间隔
+    props.put("auto.commit.interval.ms", "1000");
+    props.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");  
+    props.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");  
+    
+    KafkaConsumer<String, String> consumer = new KafkaConsumer<>(props);  
+    consumer.subscribe(Arrays.asList("foo", "bar"));  
+    while (true) {
+        // 调用poll后，1000ms后，消息状态会被改为 commited
+        ConsumerRecords<String, String> records = consumer.poll(100);
+        for (ConsumerRecord<String, String> record: records) {
+            insertIntoDB(record); // 将消息入库，时间可能会超过1000ms
+        }
+    }
+    ```
+    
+  + 手动提交offset：将提交类型改为手动以后，可以保证消息“至少被消费一次”(at least once)。但是此时可能出现重复消费的情况。
+
+    ```java
+    Properties props = new Properties();  
+    props.put("bootstrap.servers", "localhost:9092");  
+    props.put("group.id", "test");  
+    
+    // 关闭自动提交，改为手动提交
+    // 关闭自动提交，改为手动提交  
+    props.put("enable.auto.commit", "false");  
+    props.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");  
+    props.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");  
+    
+    KafkaConsumer<String, String> consumer = new KafkaConsumer<>(props);  
+    consumer.subscribe(Arrays.asList("foo", "bar"));  
+    
+    final int minBatchSize = 200;  
+    List<ConsumerRecord<String, String>> buffer = new ArrayList<>();  
+    
+    while (true) {
+        // 调用poll后，不会进行auto commit
+        ConsumerRecords<String, String> records = consumer.poll(100);
+        for (ConsumerRecord<String, String> record: records) {
+            buffer.add(record);
+        }
+        if (buffer.size() >= minBatchSize) {
+            // 开启Spring事务
+            insertIntoDb(buffer); 
+            // 所有消息消费完毕后，才进行commit操作
+            // 会出现重复消费的情况，当insertIntoDb()进行了一半，也就是消息已经消费了，但是未进行提交时，程序中断了，那么再次启动时，会出现重复消费的情况
+            consumer.commitSync();
+            // 事务提交
+            buffer.clear();
+        }
+    }
+    ```
+
+    **如何处理消息重复消费（Flink提供Exactly-Once保障---二阶段提交（分布式事务））**
+
+    ​		可以使用低级API，自己管理offset，和数据一起存在MySQL中，使用事务提交数据和offset，当失败的时候，一起失败，就可以保证消息不被重复消费。
+
+    
+
+  ##### 2.5.8 Kafka数据积压
+
+  * 数据积压指的是一些外部I/O、一些比较耗时的操作（Full GC)，就会造成partition中一直存在未被消费，就会产生数据积压
+  * 若有监控系统，则尽快处理 
+
+  数据积压常见的场景：
+
+  > https://zhuanlan.zhihu.com/p/312089762
+
+  ##### 2.5.9 Kafka日志清理
+
+  
