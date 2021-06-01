@@ -66,7 +66,17 @@ flink处理流批处理的思想是：
 
 ## Flink集群搭建
 
+* local模式（本地）---单机模式，一般不使用
+* standalone模式---独立模式，Flink自带集群，开发测试环境使用
+* yarn----计算资源统一有Hadoop yarn进行管理
 
+## Flink运行架构
+
+### Flink程序结构
+
+​		Flink程序的基本构造块是**流**和**转换**。
+
+![img](flink 入门.assets/20190417165601297.jpg)
 
 ## DataSet开发
 
