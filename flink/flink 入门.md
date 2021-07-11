@@ -78,6 +78,31 @@ flink处理流批处理的思想是：
 
 ![img](flink 入门.assets/20190417165601297.jpg)
 
+### Task和Operator chain
+
+​		fink中把onetoone的operator可以合并为一个operator chain，operator chain他的某个并行度就是一个subtask。
+
+### 任务调度与执行
+
+1. 当Flink执行executor会自动根据程序代码生成DAG数据流图
+2. ActorSystem创建Actor将数据流图发送给JobManager中的Actor
+3. JobManager会不断接收TaskManager的心跳消息，从而可以获得有效的TaskManager
+4. JobManager通过调度器在TaskManager中调度执行Task（在Flink中，最小的调度单元是task，对应的就是一个线程。
+
+* jobClient：用户编写的代码，flink的客户端封装好的提交任务的客户单
+
+  主要作用：提交任务，不是flink内部的一个角色。
+
+* jobmanager：负责接收任务的执行结果并返回给客户。
+
+  主要作用：负责接收任务，对任务进行优化。并调度和执行任务；主要由调度器和checkpoint coordinator(ck协调器)
+
+* taskmanager: 从jobmanager中接收task，部署到自己的slot中并执行。tm执行任务是以线程来执行（更轻量级），tm中配置好的slot，每个slot都可以执行task
+
+### slot和slot sharing
+
+slot：flink资源调度的单元，一般slot个数与CPU核数一样
+
 ## DataSet开发
 
 ## DataStream开发
