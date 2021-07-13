@@ -68,7 +68,49 @@ flink处理流批处理的思想是：
 
 
 
-## DataSet开发
+## 流处理
+
+### 数据源
+
+* 从集合中读取数据
+* 从数组中获取元素
+* 从Kafka中获取元素
+* 自定义数据源中获取数据
+
+### Transform
+
+#### 转换算子
+
+#### map、flatMap、filter这三种算子称为基本转换算子
+
+##### map
+
+​	 来一个数据，转换成对应的一个数据
+
+##### flatMap  
+
+​	打散，做一个拆分，来一个数据，可以分离出多条数据
+
+#### 聚合操作算子
+
+##### keyBy
+
+![在这里插入图片描述](D:\文档\笔记\flink\flink 入门.assets\20200902141943335.png)
+
+DataStream->KeyedStream：逻辑地将一个流拆分成不相交的分区，每个分区包含相同key的元素，在内部以hash的形式实现。
+
+1. KeyBy会重新分区 
+2. 不同的key有可能分到一起，因为是通过hash原理实现的
+
+##### 滚动聚合算子（Rolling Aggregation）
+
+这些算子可以针对Keyedstream的每一个支流做聚合
+
+* sum()
+* min()
+* max()
+* minBy()
+* maxBy()
 
 ## DataStream开发
 
