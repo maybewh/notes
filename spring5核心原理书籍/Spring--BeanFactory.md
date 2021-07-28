@@ -6,7 +6,7 @@
 
 ​		其实现子类如下图：
 
-​	![image-20210130170515274](D:\文档\笔记\spring5核心原理书籍\Spring--BeanFactory.assets\image-20210130170515274.png)
+​	![image-20210130170515274](Spring--BeanFactory.assets/image-20210130170515274.png)
 
 ​	BeanFactory作为一个顶层的接口类，定义了一个IOC容器的基本功能规范，BeanFactory有三个重要的子类，分别是ListableBeanFactory、HierarchicalBeanFactory和AutowireCapableBeanFactory。其中DefaultListableBeanFactory实现了这三个接口。
 
@@ -100,19 +100,19 @@ ApplicationContext除了提供IOC容器的基本功能，还为用户提供了�
 
 Spring IOC容器管理我们定义的各种Bean对象及其相互关系，Bean对象在Spring实现中以BeanDefinition来描述。其继承体系如下：
 
-![image-20210130202542888](D:\文档\笔记\spring5核心原理书籍\Spring--BeanFactory.assets\image-20210130202542888.png)
+![image-20210130202542888](Spring--BeanFactory.assets/image-20210130202542888.png)
 
 ## Bean的解析：BeanDefinitionReader
 
 BeanDefinitionReader：Bean的解析主要是对Spring配置文件的解析，这个解析过程主要通过BeanDefinitionReader来完成。结构图如下：
 
-![image-20210130203259752](D:\文档\笔记\spring5核心原理书籍\Spring--BeanFactory.assets\image-20210130203259752.png)
+![image-20210130203259752](Spring--BeanFactory.assets/image-20210130203259752.png)
 
 ## ApplicationContext 类图
 
 
 
-![ApplicationContext](D:\文档\笔记\spring5核心原理书籍\Spring--BeanFactory.assets\ApplicationContext.png)
+![ApplicationContext](Spring--BeanFactory.assets/ApplicationContext.png)
 
 ## Bean容器的启动
 
@@ -221,7 +221,7 @@ BeanDefinitionReader：Bean的解析主要是对Spring配置文件的解析，�
 
 我们可以到实现该方法主要有两个类：
 
-![image-20210131230012672](D:\文档\笔记\spring5核心原理书籍\Spring--BeanFactory.assets\image-20210131230012672.png)
+![image-20210131230012672](Spring--BeanFactory.assets/image-20210131230012672.png)
 
 接下来来看下AbstractRefreshableApplicationContext类中的refreshBeanFactory()方法代码：
 
@@ -496,7 +496,7 @@ protected int doLoadBeanDefinitions(InputSource inputSource, Resource resource)
 
 ​	当调用BeanDefinitionReaderUtils向Spring IOC容器注册解析的BeanDefinition时，真正完成注册功能的DefaultListBeanFactory。实际上，DefaultListBeanFactory继承了BeanDefinitionRegistry。
 
-![DefaultListableBeanFactory](D:\文档\笔记\spring5核心原理书籍\Spring--BeanFactory.assets\DefaultListableBeanFactory.png)
+![DefaultListableBeanFactory](Spring--BeanFactory.assets/DefaultListableBeanFactory.png)
 
 ```java
 	DefaultListBeanFactory类中实现BeanDefinitionRegistry接口中的registerBeanDefinition方法
@@ -604,6 +604,8 @@ protected int doLoadBeanDefinitions(InputSource inputSource, Resource resource)
 
 ​	2）类内部的注解。如@Autowired、@Value、@Resource。都是添加在类内部的字段或者方法上的类内部注解，Spring IOC容器通过Bean的后置处理器(BeanPostProcessor)解析Bean内部注解
 
+***若使用spring boot，设置断点，对于注解的Bean，只有SpringApplication.run()方法传进去的对象进入了AnnotationBeanDefintionReader的doRegisterBean()方法？这个是为什么？***
+
 ## 定位Bean扫描路径
 
 ​	主要看AnnotationConfigApplicationContext.
@@ -632,6 +634,7 @@ public interface AnnotationConfigRegistry {
 ```
 
 ```
+// GenericApplicationContext补充
 public class AnnotationConfigApplicationContext extends GenericApplicationContext implements AnnotationConfigRegistry {
 
 	// 读取Bean定义读取器,并将其设置到容器中
